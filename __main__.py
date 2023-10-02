@@ -1,9 +1,17 @@
-#ISSUES
+#ISSUES AND COMMENTS
 '''
 2. Syntax Error in : ALTER TABLE j122101
                      ALTER COLUMN Seat_no varchar(6) not null;
 
 3. Infinite Loop during booking of seats when no of seats exceeds those available
+
+4. Line 156
+
+5. Line 187
+
+6. Line 268. Both functions (this and line 253 one) contain the same fundamental structure so both are having the same error.
+
+NOTE THAT CUSTID IS STORED IN THE VARIABLE CALLED `session_key`.
 '''
 
 #importing the modules
@@ -137,8 +145,15 @@ def add_flight():
     return
 
 def customer_data():
-    return 
+    flight_no=input("Enter flight no. for which customer data is to be viewed: ")
+    cur1.execute('select occupant_id from {}'.format('J'+flight_no))
+    occ=[]
+    print('|    ', end='')
+    for x in cur1.fetchall():
+        occ.append(x[0])
+        print (x[0], end='  |   ')
 
+#Leaving just this one functionality to you buddy, finish this up on 3rd October 😉.
 def history():
     return 
 
@@ -151,26 +166,28 @@ def book():
     booked_seats=seats()
     bills=bill()
     print (' ') 
+    ## Take DEP place and DATE from the `flights` table (executed above) and add it down to the ticket.
     print('''
           
                 ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ 
                   ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶
-        CUSTID: 
-        FLIGHTN:
+        CUSTID: '''+int(session_key)+'''
+        FLIGHTN: '''+str(dep)+  '''
           
-        DEP:               ARR:
+        DEP:               ARR: '''+str(arr)+ '''
         DATE:
         
-        BILL PAYED:
+        BILL PAYED: '''+str(bills)+'''
 
                 ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ 
               ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶ ◀▶
           
 ''')
 
+#Some Syntax Error is coming in this function. Ask Ma'am regarding the same.
 def indat():
     for x in booked_seats:
-        cur1.execute("update {name} set vacancy='N',occupant_id={occ_id} where Seat_NO={stn}".format(name='J'+str(dep),occ_id=55, stn=x))
+        cur1.execute('update {name} set vacancy="N",occupant_id={occ_id} where Seat_NO= {stn}'.format(name=('J'+str(dep)), occ_id=int(session_key), stn=x))
         con1.commit()
 
 def arrival():
@@ -215,7 +232,7 @@ def departure():
 
 def seats():
     try:
-        cur1.execute('select Seat_NO,class from {} where Vacancy="Y"'.format(dep))
+        cur1.execute('select Seat_NO,class from {} where Vacancy="Y"'.format('j'+str(dep)))
         rec=cur1.fetchall()
         print('Available Seats: ')
         l1=[]
@@ -228,7 +245,7 @@ def seats():
         while ns>0:
             a=int(input('Enter Seat No.: '))
             if a in l1:
-                l2.append(a)
+                l2.append(int(a))
                 ns-=1
             else:
                 print('Enter Valid Seat No.')
@@ -248,8 +265,24 @@ def bill():
     except m.Error as e:
         print(e)
 
+#Same Syntax Error is coming in this function. Ask Ma'am regarding the same.
+#Also, add cancellation charges based on some parameter. It is static at 2000. If not fine, then pls do the needful.
 def cancel():
-    return 
+    fl_cancel=input("Enter flight no. to be cancelled: ")
+    cur1.execute('select occupant_id from {}'.format('J'+fl_cancel))
+    occ=[]
+    for x in cur1.fetchall():
+        occ.append(x[0])
+    tgl=False
+    for x in occ:
+        if session_key==x:
+            tgl=True
+            cur1.execute('update {name} set vacancy="Y",occupant_id=NULL where occupant_id= {occ_id}'.format(name=('J'+str(dep)), occ_id=int(session_key) ))
+            print('Cancellation Charges: 2000')
+        else: 
+            continue
+    if tgl==False:
+        print('You have not booked this flight.')
 
 #defining menu messages
 user_choice_menu='''
@@ -296,37 +329,69 @@ while True:
 
 
     if user_choice=='1':
-        print(admin_menu)
-        admin_choice=input('Choose the respective numeric choice: ')
+        print('''ENTER THE CREDENTIALS
+                ----------------------
+              ''')
+        username=input('Username: ')
+        password=input('Password: ')
+        if (username=='admin') and (password=='admin'):
+            print(admin_menu)
+            admin_choice=input('Choose the respective numeric choice: ')
 
-        if admin_choice=='1':
-            route_data()
+            if admin_choice=='1':
+                route_data()
 
-        elif admin_choice=='2':
-            flight_data()
+            elif admin_choice=='2':
+                flight_data()
 
-        elif admin_choice=='3':
-            customer_data()
-        
-        elif admin_choice=='4':
-            continue
+            elif admin_choice=='3':
+                customer_data()
+            
+            elif admin_choice=='4':
+                continue
+        else:
+            print("Unauthorized access")
 
 
     elif user_choice=='2':
-        print(customer_menu)
-        customer_choice=input('Choose the respective numeric choice: ')
+        print('''
+              
+ENTER THE CREDENTIALS
+----------------------
+              ''')
+        
 
-        if customer_choice=='1':
-            history()
+        cur1.execute('SELECT * FROM allcusts')
+        all_users_data=[]
+        for x in cur1.fetchall():
+            all_users_data.append({'session_key':str(x[0]), 'passkey':x[1]})
+        
+        
+        session_key=input('Username: ')
+        password=input('Password: ')
+        toggle=False
+        for x in all_users_data:
+            if (session_key==x['session_key']) and (password==x['passkey']):
+                toggle=True
+                print(customer_menu)
+                customer_choice=input('Hello Customer! Choose the respective numeric choice: ')
 
-        elif customer_choice=='2':
-            book()
+                if customer_choice=='1':
+                    history()
 
-        elif customer_choice=='3':
-            cancel()
+                elif customer_choice=='2':
+                    book()
 
-        elif customer_choice=='4':
-            continue
+                elif customer_choice=='3':
+                    cancel()
+
+                elif customer_choice=='4':
+                    continue
+            else:
+                continue
+        if toggle==False:
+            print('Unauthorized Access')
+
 
 
 
